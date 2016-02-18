@@ -1,98 +1,114 @@
-angular.module('ionic-firebase-seed', ['ionic', 'firebase'])
+angular.module('bucketList', ['ionic', 'firebase', 'bucketList.controllers'])
 
-// TODO: Replace this with your own Firebase URL: https://firebase.com/signup
-.constant('FBURL', 'https://attend1234.firebaseio.com/')
+.run(function($ionicPlatform, $rootScope, $firebaseAuth, $firebase, $window, $ionicLoading) {
+    $ionicPlatform.ready(function() {
+        // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+        // for form inputs)
+        if (window.cordova && window.cordova.plugins.Keyboard) {
+            cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+        }
+        if (window.StatusBar) {
+            StatusBar.styleDefault();
+        }
 
-.factory('Auth', function($firebaseAuth, FBURL, $window) {
-  var ref = new $window.Firebase(FBURL);
-  return $firebaseAuth(ref);
-})
+        $rootScope.userEmail = null;
+        $rootScope.baseUrl = 'https://attend1234.firebaseio.com/';
+        var authRef = new Firebase($rootScope.baseUrl);
+        $rootScope.auth = $firebaseAuth(authRef);
 
-.factory('Messages', function($firebaseArray, FBURL, $window) {
-  var ref = new $window.Firebase(FBURL + '/messages');
-  return $firebaseArray(ref);
-})
+        $rootScope.show = function(text) {
+            $rootScope.loading = $ionicLoading.show({
+                content: text ? text : 'Loading..',
+                animation: 'fade-in',
+                showBackdrop: true,
+                maxWidth: 200,
+                showDelay: 0
+            });
+        };
 
-.controller('AppCtrl', function($scope, Auth, Messages) {
+        $rootScope.hide = function() {
+            $ionicLoading.hide();
+        };
 
-  // EMAIL & PASSWORD AUTHENTICATION
+        $rootScope.notify = function(text) {
+            $rootScope.show(text);
+            $window.setTimeout(function() {
+                $rootScope.hide();
+            }, 1999);
+        };
 
-  // Check for the user's authentication state
-  Auth.$onAuth(function(authData) {
-    if (authData) {
-      $scope.loggedInUser = authData;
-    } else {
-      $scope.loggedInUser = null;
-    }
-  });
+        $rootScope.logout = function() {
+            $rootScope.auth.$logout();
+            $rootScope.checkSession();
+        };
 
-  // Create a new user, called when a user submits the signup form
-  $scope.createUser = function(user) {
-    Auth.$createUser({
-      email: user.email,
-      password: user.pass
-    }).then(function() {
-      // User created successfully, log them in
-      return Auth.$authWithPassword({
-        email: user.email,
-        password: user.pass
-      });
-    }).then(function(authData) {
-      console.log('Logged in successfully as: ', authData.uid);
-      $scope.loggedInUser = authData;
-    }).catch(function(error) {
-      console.log('Error: ', error);
+        $rootScope.checkSession = function() {
+            var auth = new FirebaseSimpleLogin(authRef, function(error, user) {
+                if (error) {
+                    // no action yet.. redirect to default route
+                    $rootScope.userEmail = null;
+                    $window.location.href = '#/auth/signin';
+                } else if (user) {
+                    // user authenticated with Firebase
+                    $rootScope.userEmail = user.email;
+                    $window.location.href = ('#/bucket/list');
+                } else {
+                    // user is logged out
+                    $rootScope.userEmail = null;
+                    $window.location.href = '#/auth/signin';
+                }
+            });
+        }
     });
-  };
-
-  // Login an existing user, called when a user submits the login form
-  $scope.login = function(user) {
-    Auth.$authWithPassword({
-      email: user.email,
-      password: user.pass
-    }).then(function(authData) {
-      console.log('Logged in successfully as: ', authData.uid);
-      $scope.loggedInUser = authData;
-    }).catch(function(error) {
-      console.log('Error: ', error);
-    });
-  };
-
-  // Log a user out
-  $scope.logout = function() {
-    Auth.$unauth();
-  };
-
-  // ADD MESSAGES TO A SYNCHRONIZED ARRAY
-
-  // Bind messages to the scope
-  $scope.messages = Messages;
-
-  // Add a message to a synchronized array using $add with $firebaseArray
-  $scope.addMessage = function(message) {
-    if ($scope.loggedInUser) {
-      Messages.$add({
-        email: $scope.loggedInUser.password.email,
-        text: message.text
-      });
-      message.text = "";
-    }
-  };
-
 })
 
-.run(function($ionicPlatform, FBURL) {
-  $ionicPlatform.ready(function() {
-    // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
-    // for form inputs)
-    if (FBURL === "https://attend1234.firebaseio.com/") {
-      angular.element(document.getElementById('app-content')).html('<h1>Please configure your Firebase URL in www/js/app.js before running!</h1>');
-    }
-    if(window.cordova && window.cordova.plugins.Keyboard) {
-      cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
-    }
-    if(window.StatusBar) {
-      StatusBar.styleDefault();
-    }
-  });
+.config(function($stateProvider, $urlRouterProvider) {
+    $stateProvider
+        .state('auth', {
+            url: "/auth",
+            abstract: true,
+            templateUrl: "templates/auth.html"
+        })
+        .state('auth.signin', {
+            url: '/signin',
+            views: {
+                'auth-signin': {
+                    templateUrl: 'templates/auth-signin.html',
+                    controller: 'SignInCtrl'
+                }
+            }
+        })
+        .state('auth.signup', {
+            url: '/signup',
+            views: {
+                'auth-signup': {
+                    templateUrl: 'templates/auth-signup.html',
+                    controller: 'SignUpCtrl'
+                }
+            }
+        })
+        .state('bucket', {
+            url: "/bucket",
+            abstract: true,
+            templateUrl: "templates/bucket.html"
+        })
+        .state('bucket.list', {
+            url: '/list',
+            views: {
+                'bucket-list': {
+                    templateUrl: 'templates/bucket-list.html',
+                    controller: 'myListCtrl'
+                }
+            }
+        })
+        .state('bucket.completed', {
+            url: '/completed',
+            views: {
+                'bucket-completed': {
+                    templateUrl: 'templates/bucket-completed.html',
+                    controller: 'completedCtrl'
+                }
+            }
+        })
+    $urlRouterProvider.otherwise('/auth/signin');
 });

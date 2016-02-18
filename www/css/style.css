@@ -1,11 +1,19 @@
-.login {
-    margin-right: 30px;
+.margin {
+    margin-left: 9px;
+    margin-right: 9px;
 }
-
-.msg-input {
-    margin-top: 2px;
+.icon-actions {
+    font-size: 23px;
 }
-
-.submit-btns {
-    text-align: center;
+.checkbox {
+    vertical-align: middle;
+}
+.actions {
+    float: right;
+}
+.item-text-wrap {
+    overflow: auto;
+}
+.ion-checkmark-circled.icon-actions.margin{
+	margin-right: 35px;
 }
